@@ -8,3 +8,4 @@ openpyxl
 xgboost
 lightgbm
 shap
+imbalanced-learn
