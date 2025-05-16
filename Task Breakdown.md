@@ -28,9 +28,9 @@
 *   **Commit 3: Target Variable Definition & Creation (`01_target_variable_definition.ipynb`)**
     *   **Task:** Create `notebooks/01_target_variable_definition.ipynb`.
     *   **Task:** Investigate `SEVERITY`, `killed_total`, `injured_total` columns. (5.2)
-    *   **Task:** Implement logic for binary target `is_severe_accident` (1 if `killed_total > 0` OR `injured_total > 0`, else 0). (3.1.3, 5.1)
+    *   **Task:** Implement logic for binary target `SEVERITY` (1 if `killed_total > 0` OR `injured_total > 0`, else 0). (3.1.3, 5.1)
     *   **Task:** Verify against `SEVERITY` column, document rationale. (5.2)
-    *   **Task:** Add `is_severe_accident` to DataFrame.
+    *   **Task:** Add `SEVERITY` to DataFrame.
     *   **Task:** Analyze and visualize target variable distribution (check for imbalance). (11.2)
     *   **PRD Ref:** 3.1.3, 5.1, 5.2.
     *   **Notebook:** `01_target_variable_definition.ipynb`
@@ -84,7 +84,7 @@
 *   **Commit 10: Univariate & Bivariate EDA (`03_exploratory_data_analysis.ipynb` - Part 1)**
     *   **Task:** Create `notebooks/03_exploratory_data_analysis.ipynb`. Load preprocessed data.
     *   **Task:** Perform univariate analysis (histograms, box plots for numerical; bar charts for categorical). (FR2)
-    *   **Task:** Perform bivariate analysis (features vs. target `is_severe_accident` using stacked bars, box/violin plots). (FR2)
+    *   **Task:** Perform bivariate analysis (features vs. target `SEVERITY` using stacked bars, box/violin plots). (FR2)
     *   **Task:** Generate clear visualizations (NFR3) and document observations.
     *   **PRD Ref:** 2.2.2, 3.1.4; FR2; NFR3.
     *   **Notebook:** `03_exploratory_data_analysis.ipynb`
