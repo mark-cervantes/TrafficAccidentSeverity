@@ -1,0 +1,201 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs} % For professional quality tables
+\usepackage{url}
+\usepackage{cite}
+\usepackage{multirow} % For multi-row cells in tables
+\usepackage{siunitx} % For aligning numbers in tables by decimal point
+
+% Add other packages as needed, e.g., for algorithms if you describe one
+% \usepackage{algorithm}
+% \usepackage[noend]{algpseudocode}
+
+% Correct bad hyphenation here
+\hyphenation{op-tical net-works semi-conduc-tor EDSA Metro-Ma-ni-la data-set}
+
+\begin{document}
+
+\title{Forecasting Severe Traffic Accidents on EDSA, Metro Manila: A Machine Learning Approach}
+
+\author{
+    \IEEEauthorblockN{Kirvin Josh C. Castro}
+    \IEEEauthorblockA{IT Elective III, BSIT \\
+    Jose Rizal University\\
+    Mandaluyong, Philippines\\
+    kirvinjosh.castro@my.jru.edu}
+}
+
+\maketitle
+
+\begin{abstract}
+Traffic accidents on major thoroughfares like EDSA in Metro Manila pose significant risks to public safety. This paper details the development and evaluation of a machine learning system to forecast the likelihood of severe traffic accidents (resulting in injury or fatality). Using a publicly available dataset of accidents on EDSA from 2007-2016, contextual features including spatio-temporal information (coordinates, hour, day), road characteristics, weather conditions, and collision types were analyzed. The problem was framed as a binary classification task to predict accident severity. Several machine learning models, including Logistic Regression, Decision Trees, Random Forests, Gradient Boosting (XGBoost, LightGBM), Bagging, and AdaBoost, were trained and evaluated. Preprocessing involved handling missing data, extensive feature engineering (especially for temporal features and text descriptions), categorical encoding, and feature scaling. Models were tuned using GridSearchCV. The Random Forest model, utilizing a balanced class weight strategy, achieved the highest test F1-score of 0.907 and a ROC-AUC of 0.711. Key predictors identified included spatial coordinates (X, Y), hour of the day, day of the month, and word count of the incident description. This study demonstrates the potential of machine learning to provide actionable insights for enhancing road safety measures on EDSA.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Traffic Accident Forecasting, Machine Learning, Binary Classification, Feature Importance, Road Safety, EDSA, Predictive Modeling, Random Forest.
+\end{IEEEkeywords}
+
+\IEEEpeerreviewmaketitle
+
+\section{Introduction}
+% I. INTRODUCTION
+Rapid urbanization and increasing vehicular volume on major arterial roads like Epifanio de los Santos Avenue (EDSA) in Metro Manila have led to a high incidence of traffic accidents. These accidents not only cause significant economic losses but, more critically, result in injuries and fatalities. Proactive measures informed by data-driven insights are essential for mitigating these risks and improving road safety \cite{Luz2019}. The ability to forecast when and where severe accidents are likely to occur can enable authorities to implement targeted interventions, optimize resource allocation for emergency services, and inform public awareness campaigns.
+
+The primary objective of this research is to develop and evaluate machine learning models capable of forecasting the likelihood of severe traffic accidents (defined as those involving at least one injury or fatality) on EDSA. This is based on a comprehensive dataset spanning ten years (2007-2016) of accident records \cite{Luz2019}, encompassing various contextual features.
+
+This study translates the challenge of enhancing road safety into a specific machine learning task: binary classification. The models aim to predict whether a recorded accident instance is 'Severe' (1) or 'Non-severe' (0). Key stakeholders for such a system include transportation authorities, emergency response units, and urban planners, who require accurate forecasts and an understanding of accident-contributing factors.
+
+Success for this project is defined by several metrics:
+\begin{itemize}
+    \item The predictive accuracy of the models, particularly in identifying severe accidents, as measured by Precision, Recall, and F1-score.
+    \item The ability to identify and rank significant predictors of severe accidents, providing actionable insights.
+    \item The development of a well-documented and reproducible modeling pipeline.
+\end{itemize}
+The potential impact of this work lies in its contribution to data-informed road safety strategies, ultimately aiming to reduce the frequency and severity of accidents on one of Metro Manila's most critical roadways. This paper details the methodology employed, from data acquisition and preprocessing to model development, evaluation, and feature importance analysis.
+
+The remainder of this paper is organized as follows: Section II describes the data source and the preprocessing steps undertaken. Section III details the machine learning models developed and the training methodology. Section IV presents the experimental results and a discussion of the model performance and feature importance. Finally, Section V concludes the paper and suggests directions for future work.
+
+\section{Data and Methodology}
+This section details the dataset used, the definition of the target variable, feature engineering steps, data preprocessing techniques, and the data splitting strategy.
+
+\subsection{Data Source and Description}
+The primary dataset used in this study is "Road Traffic Accident Data of Epifanio delos Santos Avenue, Metro Manila (2007-2016)" \cite{Luz2019}. This dataset contains records of traffic incidents on EDSA over a ten-year period. Each record includes various attributes such as date and time of the incident, location coordinates (X, Y), weather conditions, light conditions, type of collision, main cause, reporting agency, and casualty counts (killed and injured). The original dataset was provided as a CSV file (`RTA_EDSA_2007-2016.csv`).
+
+\subsection{Target Variable Definition}
+The core task is to predict the severity of an accident. A binary target variable, \texttt{SEVERITY}, was created. An accident was labeled as 'Severe' (1) if the total number of killed persons (\texttt{killed\_total}) was greater than zero or the total number of injured persons (\texttt{injured\_total}) was greater than zero. Otherwise, it was labeled 'Non-severe' (0). Casualty count columns were filled with 0 for missing values before this definition.
+
+\subsection{Feature Engineering}
+Several new features were derived from the existing data to enhance model performance:
+\begin{itemize}
+    \item \textbf{Temporal Features:} From the \texttt{DATE\_UTC} and \texttt{TIME\_UTC} columns, features such as \texttt{hour}, \texttt{day\_of\_week}, \texttt{day} (of month), \texttt{month}, \texttt{year}, \texttt{is\_weekend}, and \texttt{season} were extracted.
+    \item \textbf{Text-based Feature:} A feature named \texttt{desc\_word\_count} was created, representing the number of words in the incident description text, which was available in the dataset.
+\end{itemize}
+Features directly related to the outcome (e.g., \texttt{killed\_total}, \texttt{injured\_total}) and unique identifiers (e.g., \texttt{INCIDENTDETAILS\_ID}) were excluded from the feature set to prevent data leakage and irrelevance.
+
+\subsection{Data Preprocessing}
+\begin{itemize}
+    \item \textbf{Missing Value Imputation:} Categorical features (e.g., \texttt{WEATHER}, \texttt{LIGHT}, \texttt{MAIN\_CAUSE}) with missing values were imputed with the string 'Unknown'.
+    \item \textbf{Categorical Encoding:} Nominal categorical features such as \texttt{ROAD}, \texttt{MAIN\_CAUSE}, \texttt{COLLISION\_TYPE}, \texttt{WEATHER}, \texttt{LIGHT}, \texttt{REPORTING\_AGENCY}, and the engineered \texttt{season} feature were transformed using One-Hot Encoding.
+    \item \textbf{Numerical Scaling:} All numerical features in the training and test sets were scaled using \texttt{StandardScaler} after the train-test split to ensure they have zero mean and unit variance.
+\end{itemize}
+The fully preprocessed data was then used for model training.
+
+\subsection{Data Splitting}
+The dataset was split into a training set (80\%) and a test set (20\%). A stratified splitting strategy based on the target variable \texttt{SEVERITY} was employed to ensure that the proportion of severe and non-severe accidents was maintained in both sets. A \texttt{random\_state=42} was used for reproducibility. The validation set for hyperparameter tuning was implicitly created by the cross-validation procedure within \texttt{GridSearchCV}.
+
+\section{Model Development and Evaluation}
+
+\subsection{Machine Learning Algorithms}
+A suite of machine learning algorithms suitable for binary classification tasks was selected for evaluation:
+\begin{enumerate}
+    \item Logistic Regression
+    \item Decision Tree Classifier
+    \item Random Forest Classifier
+    \item Gradient Boosting Machines (XGBoost, LightGBM)
+    \item Bagging Ensemble (BaggingClassifier with Decision Trees)
+    \item Boosting Ensemble (AdaBoost Classifier)
+\end{enumerate}
+
+\subsection{Training and Hyperparameter Tuning}
+Each model was trained on the preprocessed training data. Hyperparameter tuning was performed using \texttt{GridSearchCV} with k-fold cross-validation (typically \(k=3\) or \(k=5\), depending on the model's computational cost). The primary scoring metric for guiding the hyperparameter search was often the F1-score, given its suitability for potentially imbalanced datasets and the project's focus on correctly identifying severe accidents. For some models, ROC-AUC was also considered. The best set of hyperparameters found by \texttt{GridSearchCV} was then used to train the final model on the entire training dataset.
+
+\subsection{Evaluation Metrics}
+Model performance was assessed on the unseen test set using the following standard classification metrics:
+\begin{itemize}
+    \item \textbf{Precision:} The ratio of correctly predicted positive observations to the total predicted positive observations (\(TP / (TP + FP)\)).
+    \item \textbf{Recall (Sensitivity):} The ratio of correctly predicted positive observations to all observations in the actual class (\(TP / (TP + FN)\)).
+    \item \textbf{F1-score:} The harmonic mean of Precision and Recall (\(2 \times (Precision \times Recall) / (Precision + Recall)\)). This is particularly useful for imbalanced classes.
+    \item \textbf{ROC-AUC (Area Under the Receiver Operating Characteristic Curve):} Measures the ability of the model to distinguish between classes.
+\end{itemize}
+
+\subsection{Handling Class Imbalance}
+Given that severe accidents might be less frequent than non-severe ones, strategies to handle class imbalance were considered. For instance, the Random Forest model, which emerged as a top performer, utilized the \texttt{class\_weight="balanced"} hyperparameter. This setting automatically adjusts weights inversely proportional to class frequencies in the input data. Other models might have used similar techniques or resampling strategies like SMOTE if deemed necessary during experimentation.
+
+\section{Results and Discussion}
+
+\subsection{Model Performance Comparison}
+Table \ref{tab:model_performance} summarizes the performance of the key machine learning models on the test set. The Random Forest classifier achieved the highest F1-score, indicating a strong balance between precision and recall for identifying severe accidents. XGBoost also demonstrated competitive performance.
+
+\begin{table}[!htbp]
+\centering
+\caption{Test Set Performance of Selected Models}
+\label{tab:model_performance}
+\sisetup{round-mode=places,round-precision=3} % Setup for siunitx to round to 3 decimal places
+\begin{tabular}{lSSSS}
+\toprule
+\textbf{Model} & {\textbf{Precision}} & {\textbf{Recall}} & {\textbf{F1-score}} & {\textbf{ROC-AUC}} \\
+\midrule
+Random Forest   & 0.906061983 & 0.93182333  & 0.906780326 & 0.710667488 \\
+XGBoost         & 0.896549333 & 0.930690827 & 0.902088945 & 0.713723256 \\
+LightGBM        & 0.90261395  & 0.689241223 & 0.765878248 & 0.713501584 \\
+% Logistic Reg. & {--} & {--} & {--} & {--} \\ % Data incomplete
+\bottomrule
+\end{tabular}
+\end{table}
+% Note: Logistic Regression data was incomplete in the provided snippet for test metrics.
+
+The Random Forest model, configured with \texttt{class\_weight="balanced"}, \texttt{min\_samples\_leaf=2}, \texttt{min\_samples\_split=2}, and \texttt{n\_estimators=200}, yielded a test F1-score of \(0.907\) and a ROC-AUC of \(0.711\). The XGBoost model, with hyperparameters including \texttt{colsample\_bytree=0.6}, \texttt{gamma=0.5}, \texttt{learning\_rate=0.1}, \texttt{max\_depth=5}, and \texttt{n\_estimators=300}, achieved a slightly lower F1-score of \(0.902\) but a marginally higher ROC-AUC of \(0.714\). LightGBM showed good precision and ROC-AUC but had a lower recall compared to Random Forest and XGBoost, resulting in a lower F1-score.
+
+\subsection{Feature Importance Analysis}
+Understanding which features contribute most to predicting severe accidents is crucial for deriving actionable insights. Feature importance was assessed using model-specific attributes (e.g., \texttt{feature\_importances\_} for tree-based models) and statistical tests.
+
+\subsubsection{Model-Based Importance}
+The top features varied slightly across the best-performing models:
+\begin{itemize}
+    \item \textbf{Random Forest:} The most influential features were spatial coordinates (\texttt{Y} and \texttt{X}), temporal features (\texttt{hour}, \texttt{day}), and the engineered \texttt{desc\_word\_count}.
+    \item \textbf{XGBoost:} Top features included \texttt{COLLISION\_TYPE\_Self-Accident}, \texttt{WEATHER\_Unknown}, \texttt{LIGHT\_Unknown}, \texttt{COLLISION\_TYPE\_Multiple}, and \texttt{LIGHT\_day}.
+    \item \textbf{LightGBM:} Important features were \texttt{X}, \texttt{Y}, \texttt{hour}, \texttt{desc\_word\_count}, and \texttt{year}.
+    \item \textbf{AdaBoost:} Highlighted \texttt{COLLISION\_TYPE\_Self-Accident}, \texttt{desc\_word\_count}, and \texttt{hour}.
+\end{itemize}
+Commonly important features across multiple models include spatial location (X, Y coordinates), time of day (\texttt{hour}), and characteristics of the collision (e.g., \texttt{COLLISION\_TYPE\_Self-Accident}, \texttt{desc\_word\_count}). The importance of 'Unknown' categories for weather and light in XGBoost suggests that instances where this information is not recorded might correlate with accident severity, or that 'Unknown' acts as a proxy for other unobserved factors.
+
+\subsubsection{Statistical Feature Significance}
+Statistical tests provided further evidence of feature relevance:
+\begin{itemize}
+    \item \textbf{Chi-squared Test (for categorical features):} Top significant features included \texttt{COLLISION\_TYPE\_Self-Accident} (\(\chi^2 \approx 311.6\)), \texttt{hour} (\(\chi^2 \approx 305.6\)), and \texttt{LIGHT\_night} (\(\chi^2 \approx 64.8\)).
+    \item \textbf{ANOVA F-test (for numerical features vs. target):} Similarly, \texttt{COLLISION\_TYPE\_Self-Accident} (after one-hot encoding, treated as numerical input for this test in some contexts) showed high significance (\(F \approx 320.4\)). Features like \texttt{LIGHT\_Unknown} and \texttt{WEATHER\_Unknown} also showed high F-scores (\(F \approx 100.5\)).
+\end{itemize}
+These statistical results largely corroborate the findings from model-based importance measures, emphasizing the role of collision type, time, and lighting conditions.
+
+\subsection{Discussion}
+The Random Forest model was selected as the most suitable model due to its superior F1-score on the test set, which is critical for this problem where correctly identifying severe accidents (True Positives) while minimizing False Negatives and False Positives is important. Its use of balanced class weights directly addresses the potential class imbalance. While XGBoost showed comparable ROC-AUC, its F1-score was slightly lower.
+
+The feature importance analysis reveals that accident severity on EDSA is influenced by a combination of spatial, temporal, and circumstantial factors. The high importance of X and Y coordinates suggests specific locations or segments on EDSA are more prone to severe accidents. The \texttt{hour} of the day is consistently a top predictor, likely reflecting traffic volume patterns, driver fatigue, or visibility changes. The \texttt{desc\_word\_count} feature's relevance might indicate that more complex or severe incidents tend to have longer descriptions, or it could be capturing nuances not present in other structured fields. The significance of \texttt{COLLISION\_TYPE\_Self-Accident} points to a particularly dangerous type of incident.
+
+The insights derived can inform targeted interventions. For example, increased surveillance or patrol during high-risk hours or at identified high-risk locations (based on X, Y coordinates) could be beneficial. Further investigation into 'Self-Accidents' could lead to specific road design or driver education improvements.
+
+\section{Conclusion}
+This study successfully developed and evaluated machine learning models for forecasting severe traffic accidents on EDSA, Metro Manila. The Random Forest classifier demonstrated the best performance, achieving a test F1-score of \(0.907\) and a ROC-AUC of \(0.711\). Key predictors of severe accidents were identified as spatial coordinates, hour of the day, day of the month, word count of the incident description, and specific collision types like 'Self-Accident'.
+
+The findings underscore the potential of machine learning techniques to provide valuable insights for traffic safety management. The identified high-risk factors can guide the strategic deployment of resources and the formulation of preventative measures aimed at reducing the occurrence and severity of accidents on EDSA.
+
+Limitations of this study include the reliance on the completeness and accuracy of the historical data. The 'Unknown' categories for some features, while predictive, warrant further investigation to understand the underlying reasons for missing data.
+
+Future work could involve:
+\begin{itemize}
+    \item Incorporating real-time data streams (e.g., traffic flow, dynamic weather updates) for more adaptive forecasting.
+    \item Exploring more advanced feature engineering techniques, such as interaction terms or embeddings for textual data.
+    \item Developing a deployment strategy for the model to provide real-time alerts or periodic risk reports to relevant authorities.
+    \item Investigating deep learning models, which might capture more complex patterns if more granular data becomes available.
+\end{itemize}
+
+% \section*{Acknowledgment}
+% The authors would like to thank... (Optional: if you want to acknowledge anyone or any funding)
+
+\bibliographystyle{IEEEtran}
+\bibliography{IEEEabrv,references} % Assuming your .bib file is named references.bib
+
+\end{document}
+
+% Create a file named "references.bib" in the same directory with the following content:
+% @MISC{Luz2019,
+%   author = {Luz, Leonard and Blanco, Ariel},
+%   title = {{Road Traffic Accident Data of Epifanio delos Santos Avenue, Metro Manila (2007-2016)}},
+%   year = {2019},
+%   publisher = {Mendeley Data},
+%   version = {V1},
+%   doi = {10.17632/hwbf6n4krw.1},
+%   url = {https://data.mendeley.com/datasets/hwbf6n4krw/1}
+% }
